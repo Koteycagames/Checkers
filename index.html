@@ -287,13 +287,19 @@
                 return;
             }
 
-            console.log('Поиск друга с email:', friendEmail); // Отладка
+            if (friendEmail === currentUser.email.toLowerCase()) {
+                errorElement.textContent = 'Нельзя добавить себя в друзья!';
+                console.log('Попытка добавить себя:', friendEmail);
+                return;
+            }
+
+            console.log('Поиск друга с email:', friendEmail);
             const usersRef = ref(db, 'users');
             get(usersRef).then((snapshot) => {
                 let friendUid = null;
                 snapshot.forEach((userSnapshot) => {
                     const userEmail = userSnapshot.val().email.toLowerCase();
-                    console.log('Проверяемый email:', userEmail); // Отладка
+                    console.log('Проверяемый email:', userEmail);
                     if (userEmail === friendEmail) {
                         friendUid = userSnapshot.key;
                     }
@@ -301,11 +307,7 @@
 
                 if (!friendUid) {
                     errorElement.textContent = 'Пользователь с таким email не найден!';
-                    console.log('Пользователь не найден:', friendEmail); // Отладка
-                    return;
-                }
-                if (friendUid === currentUser.uid) {
-                    errorElement.textContent = 'Нельзя добавить себя!';
+                    console.log('Пользователь не найден:', friendEmail);
                     return;
                 }
 
@@ -319,11 +321,11 @@
                     document.getElementById('friend-email').value = '';
                 }).catch((error) => {
                     errorElement.textContent = 'Ошибка: ' + error.message;
-                    console.log('Ошибка отправки запроса:', error); // Отладка
+                    console.log('Ошибка отправки запроса:', error);
                 });
             }).catch((error) => {
                 errorElement.textContent = 'Ошибка базы данных: ' + error.message;
-                console.log('Ошибка чтения users:', error); // Отладка
+                console.log('Ошибка чтения users:', error);
             });
         }
 
@@ -367,6 +369,7 @@
         }
 
         window.acceptFriend = function(fromUid) {
+            if (fromUid === currentUser.uid) return; // На всякий случай
             const friendRef = ref(db, `friends/${currentUser.uid}/${fromUid}`);
             get(ref(db, `users/${fromUid}`)).then((snapshot) => {
                 set(friendRef, { email: snapshot.val().email });
@@ -431,7 +434,6 @@
 
                 const invitesRef = ref(db, `lobbyInvites/${currentUser.uid}`);
                 onValue(invitesRef, (inviteSnapshot) => {
-                    inviteList.innerHTML = '';
                     inviteSnapshot.forEach((invite) => {
                         const lobbyId = invite.key;
                         const creatorEmail = invite.val().creatorEmail;
@@ -478,6 +480,36 @@
                 window.showScreen('play-stupids');
                 loadFriends();
             });
+        }
+
+        window.changeMenuSize = function() {
+            const size = document.getElementById('menu-size').value;
+            console.log('Изменение размера меню:', size);
+            const containers = document.querySelectorAll('.container');
+            containers.forEach(container => {
+                container.classList.remove('scale-small', 'scale-normal', 'scale-large');
+                container.classList.add(`scale-${size}`);
+            });
+        }
+
+        window.toggleSound = function() {
+            const sound = document.getElementById('sound-toggle').value;
+            console.log('Звук:', sound);
+            alert(`Звук: ${sound === 'on' ? 'включён' : 'выключен'} (заглушка)`);
+        }
+
+        window.toggleTheme = function() {
+            const theme = document.getElementById('theme-toggle').value;
+            console.log('Смена темы:', theme);
+            document.body.classList.remove('dark-theme');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+        }
+
+        window.resetProgress = function() {
+            console.log('Сброс прогресса');
+            alert('Прогресс сброшен (заглушка)!');
         }
 
         auth.onAuthStateChanged((user) => {
