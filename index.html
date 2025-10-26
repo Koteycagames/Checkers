@@ -257,6 +257,7 @@
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     currentUser = userCredential.user;
+                    console.log('Вход выполнен:', currentUser.email, 'UID:', currentUser.uid);
                     set(ref(db, `users/${currentUser.uid}`), { email: currentUser.email })
                         .then(() => {
                             loadFriends();
@@ -272,6 +273,7 @@
             signOut(auth)
                 .then(() => {
                     currentUser = null;
+                    console.log('Выход выполнен');
                     window.showScreen('login');
                 })
                 .catch((error) => {
@@ -284,9 +286,12 @@
             const errorElement = document.getElementById('friend-error');
             if (!friendEmail || !currentUser) {
                 errorElement.textContent = 'Введи email друга!';
+                console.log('Ошибка: нет email или currentUser');
                 return;
             }
 
+            console.log('Текущий пользователь:', currentUser.email, 'UID:', currentUser.uid);
+            console.log('Введённый email друга:', friendEmail);
             if (friendEmail === currentUser.email.toLowerCase()) {
                 errorElement.textContent = 'Нельзя добавить себя в друзья!';
                 console.log('Попытка добавить себя:', friendEmail);
@@ -299,7 +304,7 @@
                 let friendUid = null;
                 snapshot.forEach((userSnapshot) => {
                     const userEmail = userSnapshot.val().email.toLowerCase();
-                    console.log('Проверяемый email:', userEmail);
+                    console.log('Проверяемый email:', userEmail, 'UID:', userSnapshot.key);
                     if (userEmail === friendEmail) {
                         friendUid = userSnapshot.key;
                     }
@@ -311,6 +316,7 @@
                     return;
                 }
 
+                console.log('Найден друг:', friendEmail, 'UID:', friendUid);
                 // Проверка, не друг ли уже
                 get(ref(db, `friends/${currentUser.uid}/${friendUid}`)).then((friendSnapshot) => {
                     if (friendSnapshot.exists()) {
@@ -335,16 +341,22 @@
                             errorElement.textContent = '';
                             alert('Запрос дружбы отправлен!');
                             document.getElementById('friend-email').value = '';
-                            console.log(`Запрос отправлен от ${currentUser.email} к ${friendEmail}`);
+                            console.log(`Запрос отправлен от ${currentUser.email} к ${friendEmail} (friendUid: ${friendUid})`);
                         }).catch((error) => {
                             errorElement.textContent = 'Ошибка: ' + error.message;
-                            console.log('Ошибка отправки запроса:', error);
+                            console.log('Ошибка отправки запроса:', error.message);
                         });
+                    }).catch((error) => {
+                        errorElement.textContent = 'Ошибка проверки запроса: ' + error.message;
+                        console.log('Ошибка проверки запроса:', error.message);
                     });
+                }).catch((error) => {
+                    errorElement.textContent = 'Ошибка проверки друзей: ' + error.message;
+                    console.log('Ошибка проверки друзей:', error.message);
                 });
             }).catch((error) => {
                 errorElement.textContent = 'Ошибка базы данных: ' + error.message;
-                console.log('Ошибка чтения users:', error);
+                console.log('Ошибка чтения users:', error.message);
             });
         }
 
@@ -397,19 +409,32 @@
             if (fromUid === currentUser.uid) return;
             const friendRef = ref(db, `friends/${currentUser.uid}/${fromUid}`);
             get(ref(db, `users/${fromUid}`)).then((snapshot) => {
-                if (!snapshot.exists()) return;
+                if (!snapshot.exists()) {
+                    console.log('Пользователь не найден для принятия дружбы:', fromUid);
+                    return;
+                }
                 set(friendRef, { email: snapshot.val().email })
                     .then(() => {
                         remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`));
                         const reciprocalFriendRef = ref(db, `friends/${fromUid}/${currentUser.uid}`);
                         set(reciprocalFriendRef, { email: currentUser.email });
                         console.log(`Добавлен друг: ${snapshot.val().email} для ${currentUser.email}`);
+                    }).catch((error) => {
+                        console.log('Ошибка при принятии друга:', error.message);
                     });
+            }).catch((error) => {
+                console.log('Ошибка чтения пользователя:', error.message);
             });
         }
 
         window.declineFriend = function(fromUid) {
-            remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`));
+            remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`))
+                .then(() => {
+                    console.log('Запрос отклонён:', fromUid);
+                })
+                .catch((error) => {
+                    console.log('Ошибка отклонения запроса:', error.message);
+                });
         }
 
         window.removeFriend = function(friendUid) {
@@ -422,6 +447,7 @@
                 })
                 .catch((error) => {
                     alert('Ошибка удаления друга: ' + error.message);
+                    console.log('Ошибка удаления друга:', error.message);
                 });
         }
 
@@ -437,6 +463,8 @@
                 window.currentLobbyId = newLobby.key;
                 loadLobby();
                 window.showScreen('lobby');
+            }).catch((error) => {
+                console.log('Ошибка создания лобби:', error.message);
             });
         }
 
@@ -501,6 +529,8 @@
                 timestamp: Date.now()
             }).then(() => {
                 alert('Приглашение отправлено!');
+            }).catch((error) => {
+                console.log('Ошибка отправки приглашения:', error.message);
             });
         }
 
@@ -511,6 +541,8 @@
                 window.currentLobbyId = lobbyId;
                 window.showScreen('lobby');
                 loadLobby();
+            }).catch((error) => {
+                console.log('Ошибка принятия приглашения:', error.message);
             });
         }
 
@@ -521,6 +553,8 @@
                 window.currentLobbyId = null;
                 window.showScreen('play-stupids');
                 loadFriends();
+            }).catch((error) => {
+                console.log('Ошибка выхода из лобби:', error.message);
             });
         }
 
@@ -557,10 +591,12 @@
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
+                console.log('Состояние авторизации: пользователь вошёл', currentUser.email, 'UID:', currentUser.uid);
                 set(ref(db, `users/${user.uid}`), { email: user.email });
                 loadFriends();
             } else {
                 currentUser = null;
+                console.log('Состояние авторизации: пользователь вышел');
                 window.showScreen('login');
             }
         });
