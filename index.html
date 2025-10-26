@@ -2,298 +2,150 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Шашки с Кошпеичками</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход и регистрация</title>
     <style>
-        body { font-family: Arial; text-align: center; }
-        #auth { margin: 20px; }
-        #friends { margin: 20px; }
-        #game { display: none; }
-        table { margin: auto; border-collapse: collapse; }
-        td { width: 50px; height: 50px; text-align: center; vertical-align: middle; }
-        .black { background: black; }
-        .white { background: white; }
-        .piece { font-size: 30px; cursor: pointer; }
-        .red { color: red; }
-        .black-piece { color: black; }
-        .selected { border: 2px solid green; }
-        #status { margin: 10px; font-size: 20px; }
-        #currency { margin: 10px; }
-        #error { color: red; margin: 10px; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 300px;
+            text-align: center;
+        }
+        .container.hidden {
+            display: none;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+            display: block;
+            margin-top: 10px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+        }
     </style>
-    <!-- Firebase Modular SDK v10.14.1 -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-        import { getDatabase, ref, set, onValue, push, update, remove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
-
-        window.firebaseModules = { initializeApp, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, getDatabase, ref, set, onValue, push, update, remove };
-    </script>
 </head>
 <body>
-    <div id="auth">
-        <input id="email" type="email" placeholder="Email">
-        <input id="password" type="password" placeholder="Пароль (минимум 6 символов)">
-        <button onclick="register()">Регистрация</button>
-        <button onclick="login()">Вход</button>
-        <button onclick="logout()">Выход</button>
-        <div id="error"></div>
+    <!-- Экран входа -->
+    <div id="login" class="container">
+        <h2>Вход</h2>
+        <input type="text" id="login-email" placeholder="Имя (email)" required>
+        <input type="password" id="login-password" placeholder="Пароль" required>
+        <button onclick="login()">Войти</button>
+        <a href="#reg" onclick="showReg()">Нет аккаунта? Зарегистрироваться</a>
+        <p id="login-error" class="error"></p>
     </div>
-    <div id="friends" style="display:none;">
-        <h3>Друзья</h3>
-        <input id="friendEmail" placeholder="Email друга">
-        <button onclick="addFriend()">Добавить друга</button>
-        <ul id="friendsList"></ul>
-        <button onclick="startGame()">Создать игру</button>
-        <input id="gameId" placeholder="ID игры друга">
-        <button onclick="joinGame()">Присоединиться</button>
-    </div>
-    <div id="currency"></div>
-    <div id="game">
-        <h2>Шашки</h2>
-        <table id="board"></table>
-        <div id="status"></div>
+
+    <!-- Экран регистрации -->
+    <div id="reg" class="container hidden">
+        <h2>Регистрация</h2>
+        <input type="text" id="reg-email" placeholder="Имя (email)" required>
+        <input type="password" id="reg-password" placeholder="Пароль" required>
+        <button onclick="register()">Зарегистрироваться</button>
+        <a href="#login" onclick="showLogin()">Есть аккаунт? Войти</a>
+        <p id="reg-error" class="error"></p>
     </div>
 
     <script type="module">
-        // Импорт модулей (для глобального доступа)
-        const { initializeApp, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, getDatabase, ref, set, onValue, push, update, remove } = window.firebaseModules;
+        // Импорт Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-        // Firebase config (ЗАМЕНИТЕ НА СВОЙ!)
+        // Конфигурация Firebase
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyD0KfNFPqWV28pULA-H9tKIOqrDg-Q5up4",
+            authDomain: "checkers-by-koteyca.firebaseapp.com",
+            databaseURL: "https://checkers-by-koteyca-default-rtdb.firebaseio.com",
+            projectId: "checkers-by-koteyca",
+            storageBucket: "checkers-by-koteyca.firebasestorage.app",
+            messagingSenderId: "417731441344",
+            appId: "1:417731441344:web:d82e2eadef635148513325"
         };
 
+        // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getDatabase(app);
 
-        let user = null;
-        let gameRef = null;
-        let playerColor = null;
-        let board = [];
-        let selectedPiece = null;
-        let turn = 'red';
-        let currency = 0;
-        let userRef = null;
-
-        onAuthStateChanged(auth, u => {
-            user = u;
-            if (user) {
-                document.getElementById('auth').style.display = 'none';
-                document.getElementById('friends').style.display = 'block';
-                userRef = ref(db, `users/${user.uid}`);
-                loadFriends();
-                loadCurrency();
-            } else {
-                document.getElementById('auth').style.display = 'block';
-                document.getElementById('friends').style.display = 'none';
-                document.getElementById('game').style.display = 'none';
-            }
-        });
-
-        window.register = async () => {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error');
-            errorDiv.innerText = ''; // Очистка ошибок
-
-            if (!email || !password) {
-                errorDiv.innerText = 'Введите email и пароль!';
-                return;
-            }
-            if (password.length < 6) {
-                errorDiv.innerText = 'Пароль слишком короткий (минимум 6 символов)!';
-                return;
-            }
-
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                console.log('Успешная регистрация:', userCredential.user);
-                // Инициализация пользователя в DB
-                await set(ref(db, `users/${userCredential.user.uid}`), { currency: 0, friends: {} });
-                errorDiv.innerText = 'Регистрация успешна!';
-            } catch (error) {
-                console.error('Ошибка регистрации:', error);
-                let msg = 'Ошибка: ';
-                switch (error.code) {
-                    case 'auth/email-already-in-use': msg += 'Email уже используется!'; break;
-                    case 'auth/weak-password': msg += 'Слабый пароль!'; break;
-                    case 'auth/invalid-email': msg += 'Неверный email!'; break;
-                    default: msg += error.message;
-                }
-                errorDiv.innerText = msg;
-            }
-        };
-
-        window.login = async () => {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error');
-            errorDiv.innerText = '';
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                errorDiv.innerText = 'Ошибка входа: ' + error.message;
-            }
-        };
-
-        window.logout = () => {
-            signOut(auth).catch(console.error);
-        };
-
-        function loadCurrency() {
-            onValue(ref(db, `users/${user.uid}/currency`), snap => {
-                currency = snap.val() || 0;
-                document.getElementById('currency').innerText = `Кошпеички: ${currency}`;
-            });
+        // Функции переключения экранов
+        window.showLogin = function() {
+            document.getElementById('login').classList.remove('hidden');
+            document.getElementById('reg').classList.add('hidden');
         }
 
-        function updateCurrency(amount) {
-            set(ref(db, `users/${user.uid}/currency`), currency + amount);
+        window.showReg = function() {
+            document.getElementById('reg').classList.remove('hidden');
+            document.getElementById('login').classList.add('hidden');
         }
 
-        window.addFriend = () => {
-            const friendEmail = document.getElementById('friendEmail').value;
-            push(ref(db, `users/${user.uid}/friends`), friendEmail);
-        };
+        // Функция регистрации
+        window.register = function() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const errorElement = document.getElementById('reg-error');
 
-        function loadFriends() {
-            const list = document.getElementById('friendsList');
-            onValue(ref(db, `users/${user.uid}/friends`), snap => {
-                list.innerHTML = '';
-                snap.forEach(child => {
-                    const li = document.createElement('li');
-                    li.innerText = child.val();
-                    list.appendChild(li);
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Успешная регистрация
+                    alert('Регистрация успешна! Теперь войдите.');
+                    showLogin();
+                })
+                .catch((error) => {
+                    errorElement.textContent = error.message;
                 });
-            });
         }
 
-        // Остальной код игры (без изменений, кроме ref/set)
-        window.startGame = () => {
-            const gameId = Date.now().toString();
-            gameRef = ref(db, `games/${gameId}`);
-            playerColor = 'red';
-            initBoard();
-            set(gameRef, { board: board.flat(), turn: 'red', players: [user.uid], status: 'waiting' });
-            alert(`ID игры: ${gameId}. Поделитесь с другом.`);
-            listenToGame();
-            document.getElementById('game').style.display = 'block';
-        };
+        // Функция входа
+        window.login = function() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error');
 
-        window.joinGame = () => {
-            const gameId = document.getElementById('gameId').value;
-            gameRef = ref(db, `games/${gameId}`);
-            playerColor = 'black';
-            update(gameRef, { players: [...(await onValue(gameRef)).players, user.uid], status: 'started' });
-            listenToGame();
-            document.getElementById('game').style.display = 'block';
-        };
-
-        function listenToGame() {
-            onValue(gameRef, snap => {
-                const data = snap.val();
-                if (data) {
-                    board = [];
-                    for (let i = 0; i < 8; i++) {
-                        board.push(data.board.slice(i*8, (i+1)*8));
-                    }
-                    turn = data.turn;
-                    renderBoard();
-                    checkWin(data);
-                    document.getElementById('status').innerText = turn === playerColor ? 'Ваш ход' : 'Ход оппонента';
-                }
-            });
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Успешный вход
+                    alert('Вход успешен! Добро пожаловать, ' + userCredential.user.email);
+                })
+                .catch((error) => {
+                    errorElement.textContent = error.message;
+                });
         }
 
-        function initBoard() {
-            board = Array(8).fill().map(() => Array(8).fill(null));
-            for (let row = 0; row < 3; row++) {
-                for (let col = (row % 2 === 0 ? 1 : 0); col < 8; col += 2) {
-                    board[row][col] = 'black';
-                }
-            }
-            for (let row = 5; row < 8; row++) {
-                for (let col = (row % 2 === 0 ? 1 : 0); col < 8; col += 2) {
-                    board[row][col] = 'red';
-                }
-            }
-        }
-
-        function renderBoard() {
-            const table = document.getElementById('board');
-            table.innerHTML = '';
-            for (let row = 0; row < 8; row++) {
-                const tr = document.createElement('tr');
-                for (let col = 0; col < 8; col++) {
-                    const td = document.createElement('td');
-                    td.className = (row + col) % 2 === 0 ? 'white' : 'black';
-                    if (board[row][col]) {
-                        const piece = document.createElement('div');
-                        piece.className = `piece ${board[row][col]}`;
-                        piece.innerText = '⛀';
-                        if (board[row][col].includes('king')) piece.innerText = '⛁';
-                        piece.onclick = () => selectPiece(row, col);
-                        td.appendChild(piece);
-                    } else {
-                        td.onclick = () => movePiece(row, col);
-                    }
-                    tr.appendChild(td);
-                }
-                table.appendChild(tr);
-            }
-        }
-
-        function selectPiece(row, col) {
-            if (!board[row][col]?.startsWith(playerColor) || turn !== playerColor) return;
-            selectedPiece = { row, col };
-            renderBoard();
-        }
-
-        function movePiece(toRow, toCol) {
-            if (!selectedPiece || turn !== playerColor) return;
-            const { row, col } = selectedPiece;
-            if (Math.abs(toRow - row) === 1 && Math.abs(toCol - col) === 1 && !board[toRow][toCol]) {
-                board[toRow][toCol] = board[row][col];
-                board[row][col] = null;
-                if (playerColor === 'red' && toRow === 0) board[toRow][toCol] += '-king';
-                if (playerColor === 'black' && toRow === 7) board[toRow][toCol] += '-king';
-                if (Math.abs(toRow - row) === 2) {
-                    const midRow = (row + toRow) / 2;
-                    const midCol = (col + toCol) / 2;
-                    board[midRow][midCol] = null;
-                }
-                turn = turn === 'red' ? 'black' : 'red';
-                update(gameRef, { board: board.flat(), turn });
-            }
-            selectedPiece = null;
-            renderBoard();
-        }
-
-        function checkWin(data) {
-            const redCount = board.flat().filter(p => p?.startsWith('red')).length;
-            const blackCount = board.flat().filter(p => p?.startsWith('black')).length;
-            if (redCount === 0) {
-                alert('Черные выиграли!');
-                updateCurrency(playerColor === 'black' ? 10 : -5);
-                remove(gameRef);
-            } else if (blackCount === 0) {
-                alert('Красные выиграли!');
-                updateCurrency(playerColor === 'red' ? 10 : -5);
-                remove(gameRef);
-            }
-        }
-
-        // Инициализация (для теста)
-        initBoard();
-        renderBoard();
+        // Инициализация: показываем экран входа по умолчанию
+        showLogin();
     </script>
 </body>
 </html>
