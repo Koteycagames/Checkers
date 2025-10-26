@@ -262,6 +262,10 @@
                         .then(() => {
                             loadFriends();
                             window.showScreen('glavnoye');
+                        })
+                        .catch((error) => {
+                            console.log('Ошибка записи в /users:', error.message);
+                            errorElement.textContent = 'Ошибка базы данных: ' + error.message;
                         });
                 })
                 .catch((error) => {
@@ -303,7 +307,7 @@
             get(usersRef).then((snapshot) => {
                 let friendUid = null;
                 snapshot.forEach((userSnapshot) => {
-                    const userEmail = userSnapshot.val().email.toLowerCase();
+                    const userEmail = userSnapshot.val().email ? userSnapshot.val().email.toLowerCase() : null;
                     console.log('Проверяемый email:', userEmail, 'UID:', userSnapshot.key);
                     if (userEmail === friendEmail) {
                         friendUid = userSnapshot.key;
@@ -592,8 +596,13 @@
             if (user) {
                 currentUser = user;
                 console.log('Состояние авторизации: пользователь вошёл', currentUser.email, 'UID:', currentUser.uid);
-                set(ref(db, `users/${user.uid}`), { email: user.email });
-                loadFriends();
+                set(ref(db, `users/${user.uid}`), { email: user.email })
+                    .then(() => {
+                        loadFriends();
+                    })
+                    .catch((error) => {
+                        console.log('Ошибка записи в /users:', error.message);
+                    });
             } else {
                 currentUser = null;
                 console.log('Состояние авторизации: пользователь вышел');
