@@ -144,6 +144,7 @@
         <h1>Играть с друзьями</h1>
         <input type="email" id="friend-email" placeholder="Email друга (test@gmail.com)">
         <button onclick="addFriend()">Добавить друга</button>
+        <p id="friend-error" class="error"></p>
         <h3>Запросы на дружбу</h3>
         <div id="friend-requests" class="friend-list"></div>
         <h3>Мои друзья</h3>
@@ -235,9 +236,13 @@
             }
 
             createUserWithEmailAndPassword(auth, email, password)
-                .then(() => {
-                    alert('Зарегистрирован! Войди.');
-                    window.showScreen('login');
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    set(ref(db, `users/${user.uid}`), { email: user.email })
+                        .then(() => {
+                            alert('Зарегистрирован! Войди.');
+                            window.showScreen('login');
+                        });
                 })
                 .catch((error) => {
                     errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
@@ -252,8 +257,11 @@
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     currentUser = userCredential.user;
-                    loadFriends();
-                    window.showScreen('glavnoye');
+                    set(ref(db, `users/${currentUser.uid}`), { email: currentUser.email })
+                        .then(() => {
+                            loadFriends();
+                            window.showScreen('glavnoye');
+                        });
                 })
                 .catch((error) => {
                     errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
@@ -271,66 +279,51 @@
                 });
         }
 
-        window.changeMenuSize = function() {
-            const size = document.getElementById('menu-size').value;
-            console.log('Изменение размера меню:', size);
-            const containers = document.querySelectorAll('.container');
-            containers.forEach(container => {
-                container.classList.remove('scale-small', 'scale-normal', 'scale-large');
-                container.classList.add(`scale-${size}`);
-            });
-        }
-
-        window.toggleSound = function() {
-            const sound = document.getElementById('sound-toggle').value;
-            console.log('Звук:', sound);
-            alert(`Звук: ${sound === 'on' ? 'включён' : 'выключен'} (заглушка)`);
-        }
-
-        window.toggleTheme = function() {
-            const theme = document.getElementById('theme-toggle').value;
-            console.log('Смена темы:', theme);
-            document.body.classList.remove('dark-theme');
-            if (theme === 'dark') {
-                document.body.classList.add('dark-theme');
-            }
-        }
-
-        window.resetProgress = function() {
-            console.log('Сброс прогресса');
-            alert('Прогресс сброшен (заглушка)!');
-        }
-
         window.addFriend = function() {
-            const friendEmail = document.getElementById('friend-email').value.trim();
+            const friendEmail = document.getElementById('friend-email').value.trim().toLowerCase();
+            const errorElement = document.getElementById('friend-error');
             if (!friendEmail || !currentUser) {
-                alert('Введи email друга!');
+                errorElement.textContent = 'Введи email друга!';
                 return;
             }
+
+            console.log('Поиск друга с email:', friendEmail); // Отладка
             const usersRef = ref(db, 'users');
             get(usersRef).then((snapshot) => {
                 let friendUid = null;
                 snapshot.forEach((userSnapshot) => {
-                    if (userSnapshot.val().email === friendEmail) {
+                    const userEmail = userSnapshot.val().email.toLowerCase();
+                    console.log('Проверяемый email:', userEmail); // Отладка
+                    if (userEmail === friendEmail) {
                         friendUid = userSnapshot.key;
                     }
                 });
+
                 if (!friendUid) {
-                    alert('Пользователь не найден!');
+                    errorElement.textContent = 'Пользователь с таким email не найден!';
+                    console.log('Пользователь не найден:', friendEmail); // Отладка
                     return;
                 }
                 if (friendUid === currentUser.uid) {
-                    alert('Нельзя добавить себя!');
+                    errorElement.textContent = 'Нельзя добавить себя!';
                     return;
                 }
+
                 const friendRequestRef = ref(db, `friendRequests/${friendUid}/${currentUser.uid}`);
                 set(friendRequestRef, {
                     fromEmail: currentUser.email,
                     timestamp: Date.now()
                 }).then(() => {
+                    errorElement.textContent = '';
                     alert('Запрос дружбы отправлен!');
                     document.getElementById('friend-email').value = '';
+                }).catch((error) => {
+                    errorElement.textContent = 'Ошибка: ' + error.message;
+                    console.log('Ошибка отправки запроса:', error); // Отладка
                 });
+            }).catch((error) => {
+                errorElement.textContent = 'Ошибка базы данных: ' + error.message;
+                console.log('Ошибка чтения users:', error); // Отладка
             });
         }
 
@@ -438,6 +431,7 @@
 
                 const invitesRef = ref(db, `lobbyInvites/${currentUser.uid}`);
                 onValue(invitesRef, (inviteSnapshot) => {
+                    inviteList.innerHTML = '';
                     inviteSnapshot.forEach((invite) => {
                         const lobbyId = invite.key;
                         const creatorEmail = invite.val().creatorEmail;
@@ -489,6 +483,7 @@
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
+                set(ref(db, `users/${user.uid}`), { email: user.email });
                 loadFriends();
             } else {
                 currentUser = null;
