@@ -161,7 +161,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        function showScreen(screen) {
+        window.showScreen = function(screen) {
+            console.log('Переключение на экран:', screen); // Для отладки
             document.getElementById('login').classList.add('hidden');
             document.getElementById('reg').classList.add('hidden');
             document.getElementById('glavnoye').classList.add('hidden');
@@ -170,11 +171,11 @@
         }
 
         window.showLogin = function() {
-            showScreen('login');
+            window.showScreen('login');
         }
 
         window.showReg = function() {
-            showScreen('reg');
+            window.showScreen('reg');
         }
 
         window.register = function() {
@@ -190,7 +191,7 @@
             createUserWithEmailAndPassword(auth, email, password)
                 .then(() => {
                     alert('Зарегистрирован! Войди.');
-                    showLogin();
+                    window.showScreen('login');
                 })
                 .catch((error) => {
                     errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
@@ -204,7 +205,7 @@
 
             signInWithEmailAndPassword(auth, email, password)
                 .then(() => {
-                    showScreen('glavnoye');
+                    window.showScreen('glavnoye');
                 })
                 .catch((error) => {
                     errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
@@ -214,7 +215,7 @@
         window.logout = function() {
             signOut(auth)
                 .then(() => {
-                    showScreen('login');
+                    window.showScreen('login');
                 })
                 .catch((error) => {
                     alert('Ошибка выхода: ' + error.message);
@@ -223,6 +224,7 @@
 
         window.changeMenuSize = function() {
             const size = document.getElementById('menu-size').value;
+            console.log('Изменение размера меню:', size); // Для отладки
             const containers = document.querySelectorAll('.container');
             containers.forEach(container => {
                 container.classList.remove('scale-small', 'scale-normal', 'scale-large');
@@ -232,12 +234,13 @@
 
         window.toggleSound = function() {
             const sound = document.getElementById('sound-toggle').value;
-            // Здесь можно добавить логику для звука (пока заглушка)
-            console.log('Звук:', sound);
+            console.log('Звук:', sound); // Для отладки
+            alert(`Звук: ${sound === 'on' ? 'включён' : 'выключен'} (заглушка)`);
         }
 
         window.toggleTheme = function() {
             const theme = document.getElementById('theme-toggle').value;
+            console.log('Смена темы:', theme); // Для отладки
             document.body.classList.remove('dark-theme');
             if (theme === 'dark') {
                 document.body.classList.add('dark-theme');
@@ -245,11 +248,11 @@
         }
 
         window.resetProgress = function() {
-            // Здесь можно добавить логику для сброса прогресса
+            console.log('Сброс прогресса'); // Для отладки
             alert('Прогресс сброшен (заглушка)!');
         }
 
-        showLogin();
+        window.showScreen('login');
     </script>
 </body>
 </html>
