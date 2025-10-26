@@ -47,10 +47,10 @@
         button:hover {
             background-color: #0056b3;
         }
-        button.decline-btn {
+        button.decline-btn, button.remove-btn {
             background-color: #dc3545;
         }
-        button.decline-btn:hover {
+        button.decline-btn:hover, button.remove-btn:hover {
             background-color: #c82333;
         }
         a {
@@ -337,7 +337,7 @@
             const friendRequestsRef = ref(db, `friendRequests/${currentUser.uid}`);
             onValue(friendRequestsRef, (snapshot) => {
                 const requestsList = document.getElementById('friend-requests');
-                requestsList.innerHTML = '';
+                requestsList.innerHTML = snapshot.exists() ? '' : '<p>Нет запросов</p>';
                 snapshot.forEach((request) => {
                     const fromUid = request.key;
                     const fromEmail = request.val().fromEmail;
@@ -357,30 +357,53 @@
             const friendsRef = ref(db, `friends/${currentUser.uid}`);
             onValue(friendsRef, (snapshot) => {
                 const friendsList = document.getElementById('friends-list');
-                friendsList.innerHTML = '';
+                friendsList.innerHTML = snapshot.exists() ? '' : '<p>Друзей пока нет</p>';
+                console.log(`Загрузка друзей для ${currentUser.email} (uid: ${currentUser.uid})`);
                 snapshot.forEach((friend) => {
+                    const friendUid = friend.key;
                     const friendEmail = friend.val().email;
+                    console.log(`Найден друг: ${friendEmail} (uid: ${friendUid})`);
                     const div = document.createElement('div');
                     div.className = 'friend-item';
-                    div.innerHTML = friendEmail;
+                    div.innerHTML = `
+                        ${friendEmail}
+                        <button class="remove-btn" onclick="removeFriend('${friendUid}')">Удалить</button>
+                    `;
                     friendsList.appendChild(div);
                 });
             });
         }
 
         window.acceptFriend = function(fromUid) {
-            if (fromUid === currentUser.uid) return; // На всякий случай
+            if (fromUid === currentUser.uid) return;
             const friendRef = ref(db, `friends/${currentUser.uid}/${fromUid}`);
             get(ref(db, `users/${fromUid}`)).then((snapshot) => {
-                set(friendRef, { email: snapshot.val().email });
-                remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`));
-                const reciprocalFriendRef = ref(db, `friends/${fromUid}/${currentUser.uid}`);
-                set(reciprocalFriendRef, { email: currentUser.email });
+                if (!snapshot.exists()) return;
+                set(friendRef, { email: snapshot.val().email })
+                    .then(() => {
+                        remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`));
+                        const reciprocalFriendRef = ref(db, `friends/${fromUid}/${currentUser.uid}`);
+                        set(reciprocalFriendRef, { email: currentUser.email });
+                        console.log(`Добавлен друг: ${snapshot.val().email} для ${currentUser.email}`);
+                    });
             });
         }
 
         window.declineFriend = function(fromUid) {
             remove(ref(db, `friendRequests/${currentUser.uid}/${fromUid}`));
+        }
+
+        window.removeFriend = function(friendUid) {
+            if (!currentUser) return;
+            remove(ref(db, `friends/${currentUser.uid}/${friendUid}`))
+                .then(() => {
+                    remove(ref(db, `friends/${friendUid}/${currentUser.uid}`));
+                    alert('Друг удалён!');
+                    console.log(`Удалён друг с uid: ${friendUid} для ${currentUser.email}`);
+                })
+                .catch((error) => {
+                    alert('Ошибка удаления друга: ' + error.message);
+                });
         }
 
         window.createLobby = function() {
