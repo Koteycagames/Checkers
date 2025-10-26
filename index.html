@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход и регистрация</title>
+    <title>Checkers By Koteyca</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,6 +13,7 @@
             height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+            transition: background-color 0.3s;
         }
         .container {
             background: white;
@@ -21,11 +22,12 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             width: 300px;
             text-align: center;
+            transition: transform 0.3s;
         }
         .container.hidden {
             display: none;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -58,17 +60,36 @@
             color: red;
             font-size: 14px;
         }
-        #glavnoye {
+        #glavnoye, #settings {
             width: 400px;
         }
-        #glavnoye h1 {
+        #glavnoye h1, #settings h1 {
             color: #333;
         }
-        #glavnoye button {
+        #glavnoye button, #settings button {
             font-size: 18px;
             padding: 15px;
             margin: 10px 0;
         }
+        #logout-btn {
+            background-color: #dc3545;
+        }
+        #logout-btn:hover {
+            background-color: #c82333;
+        }
+        .dark-theme {
+            background-color: #333;
+        }
+        .dark-theme .container {
+            background: #444;
+            color: white;
+        }
+        .dark-theme h1 {
+            color: white;
+        }
+        .scale-small { transform: scale(0.8); }
+        .scale-normal { transform: scale(1); }
+        .scale-large { transform: scale(1.2); }
     </style>
 </head>
 <body>
@@ -94,15 +115,38 @@
 
     <!-- Главное меню -->
     <div id="glavnoye" class="container hidden">
-        <h1>Главное меню</h1>
+        <h1>Checkers By Koteyca</h1>
         <button>Играть</button>
         <button>Играть с друзьями</button>
-        <button>Настройки</button>
+        <button onclick="showScreen('settings')">Настройки</button>
+    </div>
+
+    <!-- Настройки -->
+    <div id="settings" class="container hidden">
+        <h1>Настройки</h1>
+        <label>Размер меню:</label>
+        <select id="menu-size" onchange="changeMenuSize()">
+            <option value="small">Маленький</option>
+            <option value="normal" selected>Обычный</option>
+            <option value="large">Большой</option>
+        </select>
+        <label>Звук:</label>
+        <select id="sound-toggle" onchange="toggleSound()">
+            <option value="on">Вкл</option>
+            <option value="off">Выкл</option>
+        </select>
+        <label>Тема:</label>
+        <select id="theme-toggle" onchange="toggleTheme()">
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+        </select>
+        <button onclick="resetProgress()">Сбросить прогресс</button>
+        <button id="logout-btn" onclick="logout()">Выйти</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD0KfNFPqWV28pULA-H9tKIOqrDg-Q5up4",
@@ -121,6 +165,7 @@
             document.getElementById('login').classList.add('hidden');
             document.getElementById('reg').classList.add('hidden');
             document.getElementById('glavnoye').classList.add('hidden');
+            document.getElementById('settings').classList.add('hidden');
             document.getElementById(screen).classList.remove('hidden');
         }
 
@@ -148,7 +193,7 @@
                     showLogin();
                 })
                 .catch((error) => {
-                    errorElement.textContent = error.message;
+                    errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
                 });
         }
 
@@ -162,8 +207,46 @@
                     showScreen('glavnoye');
                 })
                 .catch((error) => {
-                    errorElement.textContent = error.message;
+                    errorElement.textContent = error.message.includes('invalid-email') ? 'Неправильный email (пример: test@gmail.com)' : error.message;
                 });
+        }
+
+        window.logout = function() {
+            signOut(auth)
+                .then(() => {
+                    showScreen('login');
+                })
+                .catch((error) => {
+                    alert('Ошибка выхода: ' + error.message);
+                });
+        }
+
+        window.changeMenuSize = function() {
+            const size = document.getElementById('menu-size').value;
+            const containers = document.querySelectorAll('.container');
+            containers.forEach(container => {
+                container.classList.remove('scale-small', 'scale-normal', 'scale-large');
+                container.classList.add(`scale-${size}`);
+            });
+        }
+
+        window.toggleSound = function() {
+            const sound = document.getElementById('sound-toggle').value;
+            // Здесь можно добавить логику для звука (пока заглушка)
+            console.log('Звук:', sound);
+        }
+
+        window.toggleTheme = function() {
+            const theme = document.getElementById('theme-toggle').value;
+            document.body.classList.remove('dark-theme');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+        }
+
+        window.resetProgress = function() {
+            // Здесь можно добавить логику для сброса прогресса
+            alert('Прогресс сброшен (заглушка)!');
         }
 
         showLogin();
