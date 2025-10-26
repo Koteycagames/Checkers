@@ -63,8 +63,8 @@
     <!-- Экран входа -->
     <div id="login" class="container">
         <h2>Вход</h2>
-        <input type="text" id="login-email" placeholder="Имя (email)" required>
-        <input type="password" id="login-password" placeholder="Пароль" required>
+        <input type="email" id="login-email" placeholder="Email (пример: test@gmail.com)" required autofocus>
+        <input type="password" id="login-password" placeholder="Пароль (от 6 символов)" required>
         <button onclick="login()">Войти</button>
         <a href="#reg" onclick="showReg()">Нет аккаунта? Зарегистрироваться</a>
         <p id="login-error" class="error"></p>
@@ -73,19 +73,17 @@
     <!-- Экран регистрации -->
     <div id="reg" class="container hidden">
         <h2>Регистрация</h2>
-        <input type="text" id="reg-email" placeholder="Имя (email)" required>
-        <input type="password" id="reg-password" placeholder="Пароль" required>
+        <input type="email" id="reg-email" placeholder="Email (пример: test@gmail.com)" required autofocus>
+        <input type="password" id="reg-password" placeholder="Пароль (от 6 символов)" required>
         <button onclick="register()">Зарегистрироваться</button>
         <a href="#login" onclick="showLogin()">Есть аккаунт? Войти</a>
         <p id="reg-error" class="error"></p>
     </div>
 
     <script type="module">
-        // Импорт Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
-        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyD0KfNFPqWV28pULA-H9tKIOqrDg-Q5up4",
             authDomain: "checkers-by-koteyca.firebaseapp.com",
@@ -96,55 +94,87 @@
             appId: "1:417731441344:web:d82e2eadef635148513325"
         };
 
-        // Инициализация Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Функции переключения экранов
         window.showLogin = function() {
             document.getElementById('login').classList.remove('hidden');
             document.getElementById('reg').classList.add('hidden');
+            document.getElementById('login-email').focus();
         }
 
         window.showReg = function() {
             document.getElementById('reg').classList.remove('hidden');
             document.getElementById('login').classList.add('hidden');
+            document.getElementById('reg-email').focus();
         }
 
-        // Функция регистрации
         window.register = function() {
-            const email = document.getElementById('reg-email').value;
+            const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const errorElement = document.getElementById('reg-error');
 
+            if (!email || !password) {
+                errorElement.textContent = 'Заполни оба поля!';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorElement.textContent = 'Пароль должен быть минимум 6 символов';
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                errorElement.textContent = 'Неправильный email (нужен формат: имя@домен.ру)';
+                return;
+            }
+
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Успешная регистрация
-                    alert('Регистрация успешна! Теперь войдите.');
+                    alert('Регистрация прошла! Войди в аккаунт.');
                     showLogin();
                 })
                 .catch((error) => {
-                    errorElement.textContent = error.message;
+                    console.error('Firebase ошибка:', error);
+                    let message = error.message;
+                    if (error.code === 'auth/invalid-email') {
+                        message = 'Неправильный формат email (пример: test@gmail.com)';
+                    } else if (error.code === 'auth/email-already-in-use') {
+                        message = 'Этот email уже занят';
+                    } else if (error.code === 'auth/weak-password') {
+                        message = 'Слишком слабый пароль (нужно минимум 6 символов)';
+                    }
+                    errorElement.textContent = message;
                 });
         }
 
-        // Функция входа
         window.login = function() {
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const errorElement = document.getElementById('login-error');
 
+            if (!email || !password) {
+                errorElement.textContent = 'Заполни оба поля!';
+                return;
+            }
+
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Успешный вход
-                    alert('Вход успешен! Добро пожаловать, ' + userCredential.user.email);
+                    alert('Вход успешен! Привет, ' + userCredential.user.email);
                 })
                 .catch((error) => {
-                    errorElement.textContent = error.message;
+                    console.error('Firebase ошибка:', error);
+                    let message = error.message;
+                    if (error.code === 'auth/invalid-email') {
+                        message = 'Неправильный формат email (пример: test@gmail.com)';
+                    } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                        message = 'Неправильный email или пароль';
+                    }
+                    errorElement.textContent = message;
                 });
         }
 
-        // Инициализация: показываем экран входа по умолчанию
         showLogin();
     </script>
 </body>
