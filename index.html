@@ -311,17 +311,36 @@
                     return;
                 }
 
-                const friendRequestRef = ref(db, `friendRequests/${friendUid}/${currentUser.uid}`);
-                set(friendRequestRef, {
-                    fromEmail: currentUser.email,
-                    timestamp: Date.now()
-                }).then(() => {
-                    errorElement.textContent = '';
-                    alert('Запрос дружбы отправлен!');
-                    document.getElementById('friend-email').value = '';
-                }).catch((error) => {
-                    errorElement.textContent = 'Ошибка: ' + error.message;
-                    console.log('Ошибка отправки запроса:', error);
+                // Проверка, не друг ли уже
+                get(ref(db, `friends/${currentUser.uid}/${friendUid}`)).then((friendSnapshot) => {
+                    if (friendSnapshot.exists()) {
+                        errorElement.textContent = 'Этот пользователь уже в друзьях!';
+                        console.log('Уже друг:', friendEmail);
+                        return;
+                    }
+
+                    // Проверка, не отправлен ли уже запрос
+                    get(ref(db, `friendRequests/${friendUid}/${currentUser.uid}`)).then((requestSnapshot) => {
+                        if (requestSnapshot.exists()) {
+                            errorElement.textContent = 'Запрос дружбы уже отправлен!';
+                            console.log('Запрос уже отправлен:', friendEmail);
+                            return;
+                        }
+
+                        const friendRequestRef = ref(db, `friendRequests/${friendUid}/${currentUser.uid}`);
+                        set(friendRequestRef, {
+                            fromEmail: currentUser.email,
+                            timestamp: Date.now()
+                        }).then(() => {
+                            errorElement.textContent = '';
+                            alert('Запрос дружбы отправлен!');
+                            document.getElementById('friend-email').value = '';
+                            console.log(`Запрос отправлен от ${currentUser.email} к ${friendEmail}`);
+                        }).catch((error) => {
+                            errorElement.textContent = 'Ошибка: ' + error.message;
+                            console.log('Ошибка отправки запроса:', error);
+                        });
+                    });
                 });
             }).catch((error) => {
                 errorElement.textContent = 'Ошибка базы данных: ' + error.message;
